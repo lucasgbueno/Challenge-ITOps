@@ -1,0 +1,129 @@
+name: ITOps_Challange
+run-name: ${{ github.actor }} Pipeline ITOps Challange 🚀⌨️
+on: 
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - "*.md"
+      - "*.dockerignore"
+jobs:
+  githubactions-senai:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: INSTALL PACKAGES
+        run: |
+          sudo apt update -y && sudo apt-get install figlet -y
+          echo "INSTALL PACKAGES" | figlet -f small
+          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install terraform
+          curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
+          chmod +x ./snyk
+          mv ./snyk /usr/local/bin/
+      - name: Snyk Auth
+        run: |
+          echo "Snyk Auth" | figlet -f small
+          snyk -d auth $SNYK_TOKEN
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_AUTH_TOKEN }}
+          
+      - name: Configurar AWS CLI
+        if: always()
+        run: |
+          echo "AWS CLI" | figlet -f small
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set default.region us-east-1
+          export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+          export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+          export AWS_DEFAULT_REGION="us-east-1"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: DockerLint (CI)
+        run: |
+          echo "DOCKERLINT" | figlet -f small
+          docker run --rm -i hadolint/hadolint < Dockerfile || true
+      
+      - name: Docker Login
+        if: always()
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Docker build (CI)
+        if: always()
+        run: |
+          echo "Docker Build" | figlet -f small
+          docker build --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY --build-arg AWS_DEFAULT_REGION="us-east-1" -t apicontainer .
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          
+      - name: Docker Analysis (CI)
+        if: always()
+        run: |
+          echo "VULNERABILIDADES" | figlet -c -f small
+          snyk container test itops:latest || true
+          
+      - name: Docker Push (CD)
+        if: always()
+        run: |
+          COMMIT_SHA=$(echo $GITHUB_SHA | cut -c 1-5)
+          echo $COMMIT_SHA
+
+          docker tag ITOps:latest lucasgbueno/itops/itops:$COMMIT_SHA
+          docker push lucasgbueno/itops/itops:$COMMIT_SHA
+
+      - name: Criação de EC2 via Terraform e instalacao do docker e subindo container
+        run: |
+          touch ec2.tf
+          echo "terraform {
+            required_providers {
+              aws = {
+                source = "hashicorp/aws"
+                version = "5.48.0"
+                }
+              }
+            }
+            
+            provider "aws" {
+              region = "us-east-1"
+            }
+            
+            
+            # Criar EC2 Linux
+            resource "aws_instance" "linux-docker" {
+             ami           = "ami-04b70fa74e45c3917" # ubuntu
+             instance_type = "t2.micro"
+             key_name      = "vockey" # Não esqueca de gerar a chave  pública e privada para este nome!
+             associate_public_ip_address = true
+             user_data = var.custom_data_script
+             tags = {
+                Name = Linux-Docker
+             }
+             # Definição do script de inicialização
+            variable "custom_data_script" {
+              default = <<EOF
+            #!/bin/bash
+            sudo apt update
+            docker pull lucasgbueno/itops
+            # Atualiza os pacotes do sistema para obter o Docker
+            sudo apt update
+            # Instalação do Docker Engine
+            sudo apt install docker-ce docker-ce-cli containerd.io -y
+            # Gerenciar o Docker como um usuário não root
+            sudo usermod -aG docker $USER
+            docker run -p 8080:8080 apicontainer
+            }" > ec2.tf
+          terraform init
+          terraform apply -auto-approve
+
+      - run: echo "🍏 This job's status is ${{ job.status }}."
