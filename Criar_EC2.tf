@@ -34,6 +34,6 @@ key_name      = "vockey" # Não esqueca de gerar a chave  pública e privada par
 associate_public_ip_address = true
 user_data = var.custom_data_script
 tags = {
-    Name = Linux-Docker
+    Name = "Linux-Docker"
     }
 }
