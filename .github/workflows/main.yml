@@ -16,11 +16,11 @@ jobs:
 
       - name: INSTALL PACKAGES
         run: |
-          sudo apk update && sudo apk add --no-cache figlet
+          sudo apt update -y && sudo apt-get install figlet -y
           echo "INSTALL PACKAGES" | figlet -f small
           wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apk update && sudo apk add terraform
+          sudo apt update && sudo apt install terraform
           curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
           chmod +x ./snyk
           mv ./snyk /usr/local/bin/
