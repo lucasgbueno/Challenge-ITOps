@@ -16,11 +16,11 @@ jobs:
 
       - name: INSTALL PACKAGES
         run: |
-          sudo apt update -y && sudo apt-get install figlet -y
+          sudo apk update && sudo apk add --no-cache figlet
           echo "INSTALL PACKAGES" | figlet -f small
           wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt update && sudo apt install terraform
+          sudo apk update && sudo apk add terraform
           curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
           chmod +x ./snyk
           mv ./snyk /usr/local/bin/
@@ -85,42 +85,7 @@ jobs:
       - name: Criação de EC2 via Terraform e instalacao do docker e subindo container
         if: always()
         run: |
-          touch ec2.tf
-            echo "terraform {
-              required_providers {
-                aws = {
-                  source = "hashicorp/aws"
-                  version = "5.48.0"
-                  }
-                }
-              }
-              provider "aws" {
-                region = "us-east-1"
-              }
-              # Criar EC2 Linux
-              resource "aws_instance" "linux-docker" {
-               ami           = "ami-04b70fa74e45c3917" # ubuntu
-               instance_type = "t2.micro"
-               key_name      = "vockey" # Não esqueca de gerar a chave  pública e privada para este nome!
-               associate_public_ip_address = true
-               user_data = var.custom_data_script
-               tags = {
-                  Name = Linux-Docker
-               }
-               # Definição do script de inicialização
-              variable "custom_data_script" {
-                default = <<EOF
-              #!/bin/bash
-              sudo apt update
-              docker pull lucasgbueno/itops
-              # Atualiza os pacotes do sistema para obter o Docker
-              sudo apt update
-              # Instalação do Docker Engine
-              sudo apt install docker-ce docker-ce-cli containerd.io -y
-              # Gerenciar o Docker como um usuário não root
-              sudo usermod -aG docker $USER
-              docker run -p 8080:8080 apicontainer
-              }" > ec2.tf
+          ls
           terraform init
           terraform apply -auto-approve
 
