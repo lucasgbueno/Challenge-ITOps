@@ -83,6 +83,7 @@ jobs:
           docker push lucasgbueno/itops/itops:$COMMIT_SHA
 
       - name: Criação de EC2 via Terraform e instalacao do docker e subindo container
+        if: always()
         run: |
           touch ec2.tf
           echo "terraform {
@@ -97,8 +98,6 @@ jobs:
             provider "aws" {
               region = "us-east-1"
             }
-            
-            
             # Criar EC2 Linux
             resource "aws_instance" "linux-docker" {
              ami           = "ami-04b70fa74e45c3917" # ubuntu
