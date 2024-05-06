@@ -3,7 +3,7 @@ run-name: ${{ github.actor }} Pipeline ITOps Challange 🚀⌨️
 on: 
   push:
     branches:
-      - "main"
+      - "develop"
     paths-ignore:
       - "*.md"
       - "*.dockerignore"
@@ -79,8 +79,8 @@ jobs:
           COMMIT_SHA=$(echo $GITHUB_SHA | cut -c 1-5)
           echo $COMMIT_SHA
 
-          docker tag ITOps:latest lucasgbueno/itops/itops:$COMMIT_SHA
-          docker push lucasgbueno/itops/itops:$COMMIT_SHA
+          docker tag ITOps:latest lucasgbueno/itops:$COMMIT_SHA
+          docker push lucasgbueno/itops:$COMMIT_SHA
 
       - name: Criação de EC2 via Terraform e instalacao do docker e subindo container
         if: always()
