@@ -1,10 +1,10 @@
 FROM alpine:3.18 as builder
 
 # Atualizando pacotes
-RUN apk update -y 
+RUN apk update --no-cache
 
 # Instalar Terraform
-RUN apk-get install wget unzip curl python3.9 python3-pip -y
+RUN sudo apk update && sudo apk add --no-cache wget unzip curl python3.9 py3-pip
 
 RUN wget https://releases.hashicorp.com/terraform/1.8.2/terraform_1.8.2_linux_amd64.zip
 
@@ -48,7 +48,7 @@ RUN echo "[default]" >> aws/credentials
 RUN echo "aws_access_key_id = $(echo $AWS_ACCESS_KEY_ID)" >> aws/credentials 
 RUN echo "aws_secret_access_key = $(echo $AWS_SECRET_ACCESS_KEY)" >> aws/credentials
 
-RUN apk-get update && apk-get install -y python3.9 python3-pip
+RUN sudo apk update && sudo apk add --no-cache python3.9 py3-pip
 RUN python3 -m pip install -r requirements.txt
 
 EXPOSE 8080
